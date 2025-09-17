@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fed Countdown – Amsterdam</title>
+  <style>
+    :root { --bg:#0b0f17; --fg:#e6e9ef; --muted:#9aa4b2; --accent:#7df69c; }
+    * { box-sizing:border-box }
+    html,body { height:100%; margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, 'Helvetica Neue', Arial; color:var(--fg); background:var(--bg); }
+    .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:14px; padding:10px 14px;
+              background: linear-gradient(180deg, rgba(17,24,38,.96), rgba(17,24,38,.88)); border-bottom:1px solid rgba(255,255,255,.08); backdrop-filter: blur(6px); }
+    .dot { width:10px; height:10px; border-radius:999px; background:#f6d27d; box-shadow:0 0 10px rgba(246,210,125,.8); }
+    .title { font-weight:700 }
+    .timer { font-variant-numeric: tabular-nums; display:flex; gap:10px }
+    .seg { padding:4px 8px; border-radius:8px; background: rgba(255,255,255,.06) }
+    .seg b { font-size:18px }
+    .seg span { font-size:10px; color:var(--muted); margin-left:4px; text-transform:uppercase }
+    .status { margin-left:8px; font-size:12px; color:var(--muted) }
+    .btns { margin-left:auto; display:flex; gap:8px }
+    button { background:#2e7cf6; color:#fff; border:0; border-radius:8px; padding:8px 10px; font-weight:600; cursor:pointer; }
+    .muted { background: rgba(255,255,255,.12) }
+    .content { max-width:800px; margin: 28px auto; padding: 0 18px }
+    .ok { color:var(--accent) }
+    .hint { color:var(--muted); font-size:12px }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="dot" id="dot"></div>
+    <div class="title">Fed Statement</div>
+    <div class="timer" id="timer" role="timer" aria-live="polite">
+      <div class="seg"><b id="d">0</b><span>d</span></div>
+      <div class="seg"><b id="h">0</b><span>u</span></div>
+      <div class="seg"><b id="m">0</b><span>m</span></div>
+      <div class="seg"><b id="s">0</b><span>s</span></div>
+    </div>
+    <div class="status" id="status">Doel: 20:00 CEST</div>
+    <div class="btns">
+      <button id="switch">↔︎ 20:30</button>
+      <button id="mute" class="muted">🔔 Uit</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <h1>Fed Countdown – Amsterdam</h1>
+    <p>Deze pagina telt af naar <strong>vandaag 20:00</strong> (statement). Met de knop <em>↔︎ 20:30</em> schakel je naar de persconferentie.</p>
+    <p class="hint">Laat deze tab open voor live updates per seconde.</p>
+  </div>
+
+<script>
+(function(){
+  // Helpers
+  const el = (id) => document.getElementById(id);
+  const E = { d:el('d'), h:el('h'), m:el('m'), s:el('s'), status:el('status'), dot:el('dot'), mute:el('mute'), sw:el('switch') };
+  let muted = true;
+
+  // Build today's targets in Amsterdam time
+  function dateAt(hour, minute){
+    const now = new Date();
+    // Create ISO date for today, with explicit +02:00 offset (CEST) for Amsterdam on Sep 17, 2025.
+    // If you reuse this later in CET, adjust offset accordingly.
+    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0'), d = String(now.getDate()).padStart(2,'0');
+    const hh = String(hour).padStart(2,'0'), mm = String(minute).padStart(2,'0');
+    return new Date(`${y}-${m}-${d}T${hh}:${mm}:00+02:00`);
+  }
+  let target = dateAt(20,0); // 20:00
+  let mode = 'statement';
+
+  function setMode(newMode){
+    mode = newMode;
+    if(mode === 'statement'){ target = dateAt(20,0); E.status.textContent = "Doel: 20:00 CEST"; }
+    else { target = dateAt(20,30); E.status.textContent = "Doel: 20:30 CEST (press conf)"; }
+    E.dot.style.background = mode==='statement' ? "#f6d27d" : "#89c2ff";
+  }
+
+  // If it's already past 20:00, auto-switch to 20:30
+  const now0 = new Date();
+  if (now0 > target) setMode('presser');
+
+  function tick(){
+    const now = new Date();
+    let diff = (target - now) / 1000;
+    if (diff <= 0){
+      E.d.textContent = 0; E.h.textContent = 0; E.m.textContent = 0; E.s.textContent = 0;
+      E.status.textContent = "Event gestart"; E.status.classList.add('ok');
+      E.dot.style.background = "#7df69c";
+      return;
+    }
+    const days = Math.floor(diff/86400); diff -= days*86400;
+    const hrs  = Math.floor(diff/3600);  diff -= hrs*3600;
+    const mins = Math.floor(diff/60);    diff -= mins*60;
+    const secs = Math.floor(diff);
+    E.d.textContent = days; E.h.textContent = hrs; E.m.textContent = mins; E.s.textContent = secs;
+    requestAnimationFrame(tick);
+  }
+
+  el('mute').addEventListener('click', ()=>{
+    muted = !muted;
+    el('mute').textContent = muted ? "🔔 Uit" : "🔔 Aan";
+    el('mute').classList.toggle('muted', muted);
+  });
+  el('switch').addEventListener('click', ()=> setMode(mode==='statement' ? 'presser' : 'statement'));
+
+  tick();
+})();
+</script>
+</body>
+</html>
